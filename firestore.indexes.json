@@ -1,0 +1,39 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "fiches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "prochainEnvoi",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "statut",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "historique",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "confirmedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "confirmationTokens",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "expiresAt",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -1,0 +1,461 @@
+import { useState, useEffect } from 'react';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { useAuth } from '../../contexts/AuthContext';
+import { getFirestoreForZone } from '../../utils/firebase';
+import { PERIODICITES, SUCCESS_MESSAGES } from '../../utils/constants';
+import { formatDate, calculateNextDate, getStatutBadgeClass, getStatutLabel } from '../../utils/helpers';
+import Navbar from '../Shared/Navbar';
+import Card from '../Shared/Card';
+import Button from '../Shared/Button';
+import Input from '../Shared/Input';
+import Select from '../Shared/Select';
+import Loader from '../Shared/Loader';
+
+export default function FichesList() {
+  const { userEtablissement } = useAuth();
+  const [fiches, setFiches] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingFiche, setEditingFiche] = useState(null);
+  const [formData, setFormData] = useState({
+    nomTache: '',
+    urlPdf: '',
+    frequenceMois: '6',
+    prochainEnvoi: '',
+    responsableNom: '',
+    responsableEmail: '',
+    responsableAdjointNom: '',
+    responsableAdjointEmail: '',
+    contactIds: [],
+    commentaire: '',
+  });
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (userEtablissement) {
+      fetchData();
+    }
+  }, [userEtablissement]);
+
+  async function fetchData() {
+    try {
+      const db = getFirestoreForZone(userEtablissement.zone || 'zone1');
+      const etablissementId = userEtablissement.id;
+
+      // Récupère les fiches
+      const fichesSnap = await getDocs(
+        collection(db, `etablissements/${etablissementId}/fiches`)
+      );
+
+      const fichesData = [];
+      fichesSnap.forEach((doc) => {
+        fichesData.push({
+          id: doc.id,
+          ...doc.data(),
+        });
+      });
+
+      // Trie par date
+      fichesData.sort((a, b) => {
+        const dateA = a.prochainEnvoi?.toDate ? a.prochainEnvoi.toDate() : new Date(a.prochainEnvoi);
+        const dateB = b.prochainEnvoi?.toDate ? b.prochainEnvoi.toDate() : new Date(b.prochainEnvoi);
+        return dateA - dateB;
+      });
+
+      setFiches(fichesData);
+
+      // Récupère les contacts
+      const contactsSnap = await getDocs(
+        collection(db, `etablissements/${etablissementId}/contacts`)
+      );
+
+      const contactsData = [];
+      contactsSnap.forEach((doc) => {
+        contactsData.push({
+          id: doc.id,
+          ...doc.data(),
+        });
+      });
+
+      setContacts(contactsData);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function openModal(fiche = null) {
+    if (fiche) {
+      setEditingFiche(fiche);
+      setFormData({
+        nomTache: fiche.nomTache || '',
+        urlPdf: fiche.urlPdf || '',
+        frequenceMois: String(fiche.frequenceMois || '6'),
+        prochainEnvoi: fiche.prochainEnvoi ? formatDate(fiche.prochainEnvoi.toDate ? fiche.prochainEnvoi.toDate() : fiche.prochainEnvoi).split('/').reverse().join('-') : '',
+        responsableNom: fiche.responsableNom || '',
+        responsableEmail: fiche.responsableEmail || '',
+        responsableAdjointNom: fiche.responsableAdjointNom || '',
+        responsableAdjointEmail: fiche.responsableAdjointEmail || '',
+        contactIds: fiche.contactIds || [],
+        commentaire: fiche.commentaire || '',
+      });
+    } else {
+      setEditingFiche(null);
+      setFormData({
+        nomTache: '',
+        urlPdf: '',
+        frequenceMois: '6',
+        prochainEnvoi: '',
+        responsableNom: '',
+        responsableEmail: '',
+        responsableAdjointNom: '',
+        responsableAdjointEmail: '',
+        contactIds: [],
+        commentaire: '',
+      });
+    }
+    setShowModal(true);
+    setErrors({});
+  }
+
+  function validateForm() {
+    const newErrors = {};
+
+    if (!formData.nomTache) newErrors.nomTache = 'Le nom de la tâche est requis';
+    if (!formData.urlPdf) newErrors.urlPdf = 'L\'URL du PDF est requise';
+    if (!formData.prochainEnvoi) newErrors.prochainEnvoi = 'La date est requise';
+    if (formData.contactIds.length === 0) newErrors.contactIds = 'Sélectionnez au moins un contact';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setSubmitting(true);
+
+    try {
+      const db = getFirestoreForZone(userEtablissement.zone || 'zone1');
+      const etablissementId = userEtablissement.id;
+
+      const ficheData = {
+        nomTache: formData.nomTache,
+        urlPdf: formData.urlPdf,
+        frequenceMois: parseInt(formData.frequenceMois),
+        prochainEnvoi: new Date(formData.prochainEnvoi),
+        dernierEnvoi: null,
+        responsableNom: formData.responsableNom,
+        responsableEmail: formData.responsableEmail,
+        responsableAdjointNom: formData.responsableAdjointNom,
+        responsableAdjointEmail: formData.responsableAdjointEmail,
+        contactIds: formData.contactIds,
+        commentaire: formData.commentaire,
+        statut: 'en_attente',
+        updatedAt: new Date(),
+      };
+
+      if (editingFiche) {
+        await updateDoc(
+          doc(db, `etablissements/${etablissementId}/fiches`, editingFiche.id),
+          ficheData
+        );
+        alert(SUCCESS_MESSAGES.FICHE_UPDATED);
+      } else {
+        ficheData.createdAt = new Date();
+        await addDoc(
+          collection(db, `etablissements/${etablissementId}/fiches`),
+          ficheData
+        );
+        alert(SUCCESS_MESSAGES.FICHE_CREATED);
+      }
+
+      setShowModal(false);
+      fetchData();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDelete(fiche) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer "${fiche.nomTache}" ?`)) {
+      return;
+    }
+
+    try {
+      const db = getFirestoreForZone(userEtablissement.zone || 'zone1');
+      await deleteDoc(
+        doc(db, `etablissements/${userEtablissement.id}/fiches`, fiche.id)
+      );
+      alert(SUCCESS_MESSAGES.FICHE_DELETED);
+      fetchData();
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      alert('Erreur lors de la suppression');
+    }
+  }
+
+  function toggleContact(contactId) {
+    setFormData((prev) => {
+      const newContactIds = prev.contactIds.includes(contactId)
+        ? prev.contactIds.filter((id) => id !== contactId)
+        : [...prev.contactIds, contactId];
+      return { ...prev, contactIds: newContactIds };
+    });
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+
+      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Fiches de maintenance</h1>
+            <Button onClick={() => openModal()}>
+              + Nouvelle fiche
+            </Button>
+          </div>
+
+          {loading ? (
+            <Loader text="Chargement des fiches..." />
+          ) : fiches.length === 0 ? (
+            <Card>
+              <p className="text-center text-gray-500 py-8">
+                Aucune fiche de maintenance. Créez-en une pour commencer.
+              </p>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {fiches.map((fiche) => (
+                <Card key={fiche.id}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {fiche.nomTache}
+                        </h3>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatutBadgeClass(fiche.statut)}`}>
+                          {getStatutLabel(fiche.statut)}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
+                        <div>
+                          <p className="mb-1">
+                            <span className="font-medium">Périodicité :</span> {fiche.frequenceMois} mois
+                          </p>
+                          <p className="mb-1">
+                            <span className="font-medium">Prochain envoi :</span>{' '}
+                            {fiche.prochainEnvoi && formatDate(fiche.prochainEnvoi.toDate ? fiche.prochainEnvoi.toDate() : fiche.prochainEnvoi)}
+                          </p>
+                          {fiche.dernierEnvoi && (
+                            <p>
+                              <span className="font-medium">Dernier envoi :</span>{' '}
+                              {formatDate(fiche.dernierEnvoi.toDate ? fiche.dernierEnvoi.toDate() : fiche.dernierEnvoi)}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          {fiche.responsableNom && (
+                            <p className="mb-1">
+                              <span className="font-medium">Responsable :</span> {fiche.responsableNom}
+                            </p>
+                          )}
+                          {fiche.responsableAdjointNom && (
+                            <p>
+                              <span className="font-medium">Responsable adjoint :</span> {fiche.responsableAdjointNom}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {fiche.contactIds && fiche.contactIds.map((contactId) => {
+                          const contact = contacts.find((c) => c.id === contactId);
+                          return contact ? (
+                            <span
+                              key={contactId}
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {contact.nom}
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 ml-4">
+                      <Button size="sm" variant="secondary" onClick={() => openModal(fiche)}>
+                        Modifier
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(fiche)}>
+                        Supprimer
+                      </Button>
+                    </div>
+                  </div>
+
+                  {fiche.urlPdf && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <a
+                        href={fiche.urlPdf}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary-600 hover:text-primary-700"
+                      >
+                        📄 Voir la fiche PDF
+                      </a>
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal création/édition fiche */}
+      {showModal && (
+        <div className="fixed z-10 inset-0 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowModal(false)}></div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+              <form onSubmit={handleSubmit}>
+                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 max-h-[80vh] overflow-y-auto">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    {editingFiche ? 'Modifier la fiche' : 'Nouvelle fiche de maintenance'}
+                  </h3>
+
+                  <Input
+                    label="Nom de la tâche"
+                    value={formData.nomTache}
+                    onChange={(e) => setFormData({ ...formData, nomTache: e.target.value })}
+                    error={errors.nomTache}
+                    required
+                  />
+
+                  <Input
+                    label="URL du PDF (Drive, Dropbox...)"
+                    type="url"
+                    value={formData.urlPdf}
+                    onChange={(e) => setFormData({ ...formData, urlPdf: e.target.value })}
+                    error={errors.urlPdf}
+                    required
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Select
+                      label="Périodicité"
+                      value={formData.frequenceMois}
+                      onChange={(e) => setFormData({ ...formData, frequenceMois: e.target.value })}
+                      options={PERIODICITES}
+                      required
+                    />
+
+                    <Input
+                      label="Prochaine date d'envoi"
+                      type="date"
+                      value={formData.prochainEnvoi}
+                      onChange={(e) => setFormData({ ...formData, prochainEnvoi: e.target.value })}
+                      error={errors.prochainEnvoi}
+                      required
+                    />
+                  </div>
+
+                  <hr className="my-4" />
+
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Responsables</h4>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input
+                      label="Responsable principal - Nom"
+                      value={formData.responsableNom}
+                      onChange={(e) => setFormData({ ...formData, responsableNom: e.target.value })}
+                    />
+
+                    <Input
+                      label="Responsable principal - Email"
+                      type="email"
+                      value={formData.responsableEmail}
+                      onChange={(e) => setFormData({ ...formData, responsableEmail: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input
+                      label="Responsable adjoint - Nom"
+                      value={formData.responsableAdjointNom}
+                      onChange={(e) => setFormData({ ...formData, responsableAdjointNom: e.target.value })}
+                    />
+
+                    <Input
+                      label="Responsable adjoint - Email"
+                      type="email"
+                      value={formData.responsableAdjointEmail}
+                      onChange={(e) => setFormData({ ...formData, responsableAdjointEmail: e.target.value })}
+                    />
+                  </div>
+
+                  <hr className="my-4" />
+
+                  <div className="mb-4">
+                    <label className="label">
+                      Contacts à notifier <span className="text-red-500">*</span>
+                    </label>
+                    {contacts.length === 0 ? (
+                      <p className="text-sm text-gray-500">
+                        Aucun contact disponible. Créez-en d'abord dans l'onglet Contacts.
+                      </p>
+                    ) : (
+                      <div className="space-y-2 mt-2">
+                        {contacts.map((contact) => (
+                          <label key={contact.id} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={formData.contactIds.includes(contact.id)}
+                              onChange={() => toggleContact(contact.id)}
+                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">
+                              {contact.nom} ({contact.email})
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    {errors.contactIds && (
+                      <p className="mt-1 text-sm text-red-600">{errors.contactIds}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-3">
+                  <Button type="submit" loading={submitting}>
+                    {editingFiche ? 'Mettre à jour' : 'Créer la fiche'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowModal(false)}
+                    type="button"
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

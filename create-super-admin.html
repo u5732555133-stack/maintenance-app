@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créer Super Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segular UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            display: block;
+        }
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            display: block;
+        }
+        .info {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #004085;
+        }
+        .info strong {
+            display: block;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Créer le Super Admin</h1>
+        <p class="subtitle">Configuration initiale de l'application</p>
+
+        <div class="info">
+            <strong>⚠️ Important :</strong>
+            Assure-toi d'avoir lancé l'application (npm run dev) et d'avoir cliqué sur "Configuration automatique" avant de créer le super admin.
+        </div>
+
+        <form id="createAdminForm">
+            <div class="form-group">
+                <label for="name">Nom complet</label>
+                <input type="text" id="name" placeholder="Ex: Jean Dupont" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="admin@maintenance.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" placeholder="Minimum 6 caractères" required minlength="6">
+            </div>
+
+            <button type="submit" id="submitBtn">Créer le Super Admin</button>
+        </form>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Configuration Firebase Zone 1 (Super Admin)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDjBnGtyG-s6go-htxQhjUoHTm-qor7byw",
+            authDomain: "maintenance-zone1.firebaseapp.com",
+            projectId: "maintenance-zone1",
+            storageBucket: "maintenance-zone1.firebasestorage.app",
+            messagingSenderId: "705088600833",
+            appId: "1:705088600833:web:a00966180d42bce4fd3900",
+            measurementId: "G-MLSRQLQLW7"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const form = document.getElementById('createAdminForm');
+        const resultDiv = document.getElementById('result');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Création en cours...';
+            resultDiv.style.display = 'none';
+
+            try {
+                // Crée le compte dans Firebase Auth
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const uid = userCredential.user.uid;
+
+                // Ajoute le document dans Firestore
+                await setDoc(doc(db, 'superAdmins', uid), {
+                    email: email,
+                    name: name,
+                    createdAt: new Date(),
+                });
+
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `
+                    <strong>✅ Super Admin créé avec succès !</strong><br><br>
+                    <strong>Email :</strong> ${email}<br>
+                    <strong>Mot de passe :</strong> ${password}<br>
+                    <strong>UID :</strong> ${uid}<br><br>
+                    Tu peux maintenant te connecter sur <a href="http://localhost:5173" style="color: #155724; font-weight: bold;">http://localhost:5173</a>
+                `;
+
+                form.reset();
+            } catch (error) {
+                console.error('Erreur:', error);
+                resultDiv.className = 'result error';
+
+                let errorMessage = error.message;
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = 'Cet email est déjà utilisé. Le super admin existe peut-être déjà.';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = 'Le mot de passe doit contenir au moins 6 caractères.';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'L\'adresse email n\'est pas valide.';
+                }
+
+                resultDiv.innerHTML = `<strong>❌ Erreur :</strong> ${errorMessage}`;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Créer le Super Admin';
+            }
+        });
+    </script>
+</body>
+</html>
