@@ -29,6 +29,8 @@ export const ZONES = {
   ZONE2: 'zone2',
   ZONE3: 'zone3',
   ZONE4: 'zone4',
+  ZONE5: 'zone5',
+  ZONE6: 'zone6',
 };
 
 export const ZONES_LABELS = {
@@ -36,6 +38,8 @@ export const ZONES_LABELS = {
   zone2: 'Est / Grand Est',
   zone3: 'Ouest / Bretagne / Pays de Loire',
   zone4: 'Sud / PACA / Occitanie',
+  zone5: 'Centre-Val de Loire / Bourgogne',
+  zone6: 'Nouvelle-Aquitaine / Limousin',
 };
 
 // Messages d'erreur

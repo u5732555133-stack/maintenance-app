@@ -5,7 +5,7 @@ const admin = require('firebase-admin');
  * Utilisé par les Cloud Functions pour accéder aux 4 zones séparées
  */
 
-// Configurations pour les 4 zones
+// Configurations pour les 6 zones
 const zoneConfigs = {
   zone1: {
     projectId: 'maintenance-zone1',
@@ -23,6 +23,14 @@ const zoneConfigs = {
     projectId: 'maintenance-zone4',
     databaseURL: 'https://maintenance-zone4.firebaseio.com',
   },
+  zone5: {
+    projectId: 'maintenance-zone5',
+    databaseURL: 'https://maintenance-zone5.firebaseio.com',
+  },
+  zone6: {
+    projectId: 'maintenance-zone6',
+    databaseURL: 'https://maintenance-zone6.firebaseio.com',
+  },
 };
 
 // Apps initialisées pour chaque zone
@@ -30,7 +38,7 @@ const zoneApps = {};
 
 /**
  * Initialise une app Firebase Admin pour une zone donnée
- * @param {string} zoneName - Nom de la zone (zone1, zone2, zone3, zone4)
+ * @param {string} zoneName - Nom de la zone (zone1, zone2, zone3, zone4, zone5, zone6)
  * @returns {admin.app.App} - App Firebase Admin
  */
 function getZoneApp(zoneName) {
