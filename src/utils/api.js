@@ -1,9 +1,6 @@
-// Client API pour communiquer avec le backend RPI via proxy Vercel
-// En production (Vercel), utilise le proxy serverless /api
-// En dev local, utilise directement l'API RPI
-const API_URL = import.meta.env.DEV
-  ? 'https://rpi011.taild92b43.ts.net/api'  // Dev local
-  : '/api';  // Production Vercel (via proxy serverless)
+// Client API pour communiquer directement avec le backend RPI
+// Utilise Tailscale Funnel pour accéder au RPI depuis Vercel
+const API_URL = 'https://rpi011.taild92b43.ts.net/api';
 
 class ApiClient {
   constructor() {
