@@ -44,16 +44,35 @@ module.exports = async (req, res) => {
       fetchOptions.body = JSON.stringify(req.body);
     }
 
-    const response = await fetch(targetUrl, fetchOptions);
-    const data = await response.json();
+    console.log('[Proxy] Fetching:', targetUrl, 'with options:', JSON.stringify(fetchOptions));
 
-    // Renvoyer la réponse du RPI
-    return res.status(response.status).json(data);
+    const response = await fetch(targetUrl, fetchOptions);
+
+    console.log('[Proxy] Response status:', response.status);
+
+    const contentType = response.headers.get('content-type');
+
+    // Vérifier si la réponse est du JSON
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      console.log('[Proxy] Response data:', JSON.stringify(data));
+      return res.status(response.status).json(data);
+    } else {
+      // Si ce n'est pas du JSON, retourner le texte
+      const text = await response.text();
+      console.log('[Proxy] Response text:', text);
+      return res.status(response.status).json({
+        error: 'Réponse non-JSON du serveur',
+        details: text
+      });
+    }
   } catch (error) {
-    console.error('[Proxy] Erreur:', error);
+    console.error('[Proxy] Erreur complète:', error);
+    console.error('[Proxy] Stack:', error.stack);
     return res.status(500).json({
       error: 'Erreur de communication avec le serveur',
-      details: error.message
+      details: error.message,
+      stack: error.stack
     });
   }
 };
