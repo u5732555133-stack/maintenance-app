@@ -1,6 +1,9 @@
 // Proxy Vercel pour communiquer avec le backend RPI
 // Contourne les restrictions Private Network Access du navigateur
 
+const https = require('https');
+const { URL } = require('url');
+
 const RPI_API_URL = 'https://rpi011.taild92b43.ts.net/api';
 
 module.exports = async (req, res) => {
@@ -23,49 +26,65 @@ module.exports = async (req, res) => {
 
     console.log(`[Proxy] ${req.method} ${targetUrl}`);
 
-    // Préparer les headers
-    const headers = {
-      'Content-Type': 'application/json',
-    };
+    // Faire la requête HTTPS vers le RPI
+    const result = await new Promise((resolve, reject) => {
+      const url = new URL(targetUrl);
 
-    // Copier l'en-tête Authorization s'il existe
-    if (req.headers.authorization) {
-      headers['Authorization'] = req.headers.authorization;
-    }
+      const options = {
+        hostname: url.hostname,
+        port: url.port || 443,
+        path: url.pathname + url.search,
+        method: req.method,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      };
 
-    // Faire la requête vers le RPI
-    const fetchOptions = {
-      method: req.method,
-      headers,
-    };
+      // Copier l'en-tête Authorization s'il existe
+      if (req.headers.authorization) {
+        options.headers['Authorization'] = req.headers.authorization;
+      }
 
-    // Ajouter le body pour les requêtes POST/PUT
-    if (req.method === 'POST' || req.method === 'PUT') {
-      fetchOptions.body = JSON.stringify(req.body);
-    }
+      const request = https.request(options, (response) => {
+        let data = '';
 
-    console.log('[Proxy] Fetching:', targetUrl, 'with options:', JSON.stringify(fetchOptions));
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
 
-    const response = await fetch(targetUrl, fetchOptions);
+        response.on('end', () => {
+          console.log('[Proxy] Response status:', response.statusCode);
+          console.log('[Proxy] Response data:', data);
 
-    console.log('[Proxy] Response status:', response.status);
-
-    const contentType = response.headers.get('content-type');
-
-    // Vérifier si la réponse est du JSON
-    if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
-      console.log('[Proxy] Response data:', JSON.stringify(data));
-      return res.status(response.status).json(data);
-    } else {
-      // Si ce n'est pas du JSON, retourner le texte
-      const text = await response.text();
-      console.log('[Proxy] Response text:', text);
-      return res.status(response.status).json({
-        error: 'Réponse non-JSON du serveur',
-        details: text
+          try {
+            const jsonData = JSON.parse(data);
+            resolve({ status: response.statusCode, data: jsonData });
+          } catch (e) {
+            console.log('[Proxy] Non-JSON response:', data);
+            resolve({
+              status: response.statusCode,
+              data: { error: 'Réponse non-JSON du serveur', details: data }
+            });
+          }
+        });
       });
-    }
+
+      request.on('error', (error) => {
+        console.error('[Proxy] Request error:', error);
+        reject(error);
+      });
+
+      // Envoyer le body pour POST/PUT
+      if (req.method === 'POST' || req.method === 'PUT') {
+        const bodyData = JSON.stringify(req.body);
+        console.log('[Proxy] Sending body:', bodyData);
+        request.write(bodyData);
+      }
+
+      request.end();
+    });
+
+    return res.status(result.status).json(result.data);
   } catch (error) {
     console.error('[Proxy] Erreur complète:', error);
     console.error('[Proxy] Stack:', error.stack);
