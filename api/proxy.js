@@ -6,6 +6,20 @@ const { URL } = require('url');
 
 const RPI_API_URL = 'https://rpi011.taild92b43.ts.net/api';
 
+// Helper pour lire le body de la requête
+function getRawBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', chunk => {
+      data += chunk.toString();
+    });
+    req.on('end', () => {
+      resolve(data);
+    });
+    req.on('error', reject);
+  });
+}
+
 module.exports = async (req, res) => {
   // Gestion CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -26,6 +40,13 @@ module.exports = async (req, res) => {
 
     console.log(`[Proxy] ${req.method} ${targetUrl}`);
 
+    // Lire le body pour POST/PUT
+    let bodyData = '';
+    if (req.method === 'POST' || req.method === 'PUT') {
+      bodyData = await getRawBody(req);
+      console.log('[Proxy] Request body:', bodyData);
+    }
+
     // Faire la requête HTTPS vers le RPI
     const result = await new Promise((resolve, reject) => {
       const url = new URL(targetUrl);
@@ -37,8 +58,15 @@ module.exports = async (req, res) => {
         method: req.method,
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        // Important pour Tailscale
+        rejectUnauthorized: false
       };
+
+      // Ajouter Content-Length si on a un body
+      if (bodyData) {
+        options.headers['Content-Length'] = Buffer.byteLength(bodyData);
+      }
 
       // Copier l'en-tête Authorization s'il existe
       if (req.headers.authorization) {
@@ -74,10 +102,14 @@ module.exports = async (req, res) => {
         reject(error);
       });
 
+      // Timeout de 8 secondes (Vercel timeout est 10s)
+      request.setTimeout(8000, () => {
+        request.destroy();
+        reject(new Error('Request timeout'));
+      });
+
       // Envoyer le body pour POST/PUT
-      if (req.method === 'POST' || req.method === 'PUT') {
-        const bodyData = JSON.stringify(req.body);
-        console.log('[Proxy] Sending body:', bodyData);
+      if (bodyData) {
         request.write(bodyData);
       }
 
