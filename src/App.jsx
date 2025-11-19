@@ -125,3 +125,4 @@ function App() {
 }
 
 export default App;
+/* Force rebuild Mer 19 nov 2025 15:15:22 CET */
