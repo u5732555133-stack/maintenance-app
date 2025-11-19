@@ -64,7 +64,25 @@ export const requireResourceAccess = (resourceType) => {
 
     try {
       // Déterminer la table selon le type de ressource
-      const table = resourceType === 'fiche' ? 'fiches_maintenance' : 'contacts';
+      let table;
+      let resourceName;
+
+      switch (resourceType) {
+        case 'fiche':
+          table = 'fiches_maintenance';
+          resourceName = 'Fiche';
+          break;
+        case 'contact':
+          table = 'contacts';
+          resourceName = 'Contact';
+          break;
+        case 'reunion':
+          table = 'reunions';
+          resourceName = 'Réunion';
+          break;
+        default:
+          return res.status(400).json({ error: 'Type de ressource invalide' });
+      }
 
       // Vérifier que la ressource existe et appartient à l'établissement de l'utilisateur
       const result = await pool.query(
@@ -73,7 +91,7 @@ export const requireResourceAccess = (resourceType) => {
       );
 
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: `${resourceType === 'fiche' ? 'Fiche' : 'Contact'} non trouvé(e)` });
+        return res.status(404).json({ error: `${resourceName} non trouvé(e)` });
       }
 
       if (result.rows[0].etablissement_id !== req.user.etablissement_id) {

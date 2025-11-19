@@ -72,6 +72,10 @@ class ApiClient {
     this.setToken(null);
   }
 
+  async getMe() {
+    return await this.request('/auth/me');
+  }
+
   async registerSuperAdmin(email, password, name) {
     return await this.request('/auth/register-super-admin', {
       method: 'POST',
@@ -161,6 +165,36 @@ class ApiClient {
 
   async deleteContact(id) {
     return await this.request(`/contacts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ==================== RÉUNIONS ====================
+
+  async getReunions(etablissementId) {
+    return await this.request(`/etablissements/${etablissementId}/reunions`);
+  }
+
+  async getReunion(id) {
+    return await this.request(`/reunions/${id}`);
+  }
+
+  async createReunion(data) {
+    return await this.request('/reunions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateReunion(id, data) {
+    return await this.request(`/reunions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteReunion(id) {
+    return await this.request(`/reunions/${id}`, {
       method: 'DELETE',
     });
   }

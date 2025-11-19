@@ -24,6 +24,24 @@ export const PERIODICITES = [
   { value: 24, label: '2 ans' },
 ];
 
+// Jours de la semaine pour les réunions
+export const JOURS_SEMAINE = [
+  { value: 0, label: 'Dimanche' },
+  { value: 1, label: 'Lundi' },
+  { value: 2, label: 'Mardi' },
+  { value: 3, label: 'Mercredi' },
+  { value: 4, label: 'Jeudi' },
+  { value: 5, label: 'Vendredi' },
+  { value: 6, label: 'Samedi' },
+];
+
+// Fréquences des réunions
+export const FREQUENCES_REUNION = [
+  { value: 'hebdomadaire', label: 'Hebdomadaire' },
+  { value: 'bi-mensuel', label: 'Bi-mensuel (toutes les 2 semaines)' },
+  { value: 'mensuel', label: 'Mensuel' },
+];
+
 // Zones géographiques
 export const ZONES = {
   ZONE1: 'zone1',
@@ -69,6 +87,9 @@ export const SUCCESS_MESSAGES = {
   USER_CREATED: 'Utilisateur créé avec succès',
   USER_UPDATED: 'Utilisateur mis à jour',
   USER_DELETED: 'Utilisateur supprimé',
+  REUNION_CREATED: 'Réunion créée avec succès',
+  REUNION_UPDATED: 'Réunion mise à jour',
+  REUNION_DELETED: 'Réunion supprimée',
 };
 
 // Modules disponibles

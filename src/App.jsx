@@ -14,6 +14,8 @@ import ContactsList from './components/AdminEtablissement/ContactsList';
 import UsersList from './components/AdminEtablissement/UsersList';
 import Historique from './components/AdminEtablissement/Historique';
 import Settings from './components/AdminEtablissement/Settings';
+import ReunionsList from './components/AdminEtablissement/ReunionsList';
+import CalendrierReunions from './components/AdminEtablissement/CalendrierReunions';
 
 // Public
 import ConfirmMaintenance from './components/Public/ConfirmMaintenance';
@@ -93,6 +95,22 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT, ROLES.RESPONSABLE]}>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_REUNIONS}
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT, ROLES.RESPONSABLE]}>
+                <ReunionsList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_MES_REUNIONS}
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT, ROLES.RESPONSABLE]}>
+                <CalendrierReunions />
               </ProtectedRoute>
             }
           />

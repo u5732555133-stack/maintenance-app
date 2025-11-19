@@ -108,15 +108,53 @@ export function AuthProvider({ children }) {
            userRole === 'responsable';
   }
 
-  // Vérifie le token au chargement
+  // Vérifie le token au chargement et récupère les infos utilisateur
   useEffect(() => {
     const token = apiClient.getToken();
 
     if (token) {
-      // Le token existe, on peut essayer de récupérer les données utilisateur
-      // Pour l'instant on marque juste comme chargé
-      // TODO: Ajouter un endpoint /api/auth/me pour récupérer les infos utilisateur
-      setLoading(false);
+      // Le token existe, récupérer les données utilisateur
+      async function loadUser() {
+        try {
+          const response = await apiClient.getMe();
+
+          setCurrentUser({
+            id: response.user.id,
+            email: response.user.email,
+            name: response.user.name,
+          });
+
+          setUserRole(response.user.role);
+
+          if (response.user.etablissement_id) {
+            try {
+              const etablissement = await apiClient.getEtablissement(response.user.etablissement_id);
+
+              // Mapper modules (backend) vers modulesActifs (frontend)
+              const etablissementMapped = {
+                ...etablissement,
+                modulesActifs: Array.isArray(etablissement.modules)
+                  ? etablissement.modules
+                  : (typeof etablissement.modules === 'string'
+                      ? JSON.parse(etablissement.modules)
+                      : [])
+              };
+
+              setUserEtablissement(etablissementMapped);
+            } catch (error) {
+              console.error('Erreur lors de la récupération de l\'établissement:', error);
+            }
+          }
+        } catch (error) {
+          console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+          // Token invalide, le supprimer
+          apiClient.setToken(null);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      loadUser();
     } else {
       setLoading(false);
     }

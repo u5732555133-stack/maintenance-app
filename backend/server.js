@@ -96,6 +96,42 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Récupérer les infos de l'utilisateur connecté
+app.get('/api/auth/me', authenticateToken, async (req, res) => {
+  try {
+    // req.user contient déjà les infos du token JWT
+    const { id, email, role, etablissement_id } = req.user;
+
+    // Récupérer le nom de l'utilisateur
+    let userName = email;
+
+    if (role === 'super_admin') {
+      const result = await pool.query('SELECT name FROM super_admins WHERE id = $1', [id]);
+      if (result.rows.length > 0) {
+        userName = result.rows[0].name;
+      }
+    } else {
+      const result = await pool.query('SELECT name FROM etablissement_users WHERE id = $1', [id]);
+      if (result.rows.length > 0) {
+        userName = result.rows[0].name;
+      }
+    }
+
+    res.json({
+      user: {
+        id,
+        email,
+        name: userName,
+        role,
+        etablissement_id,
+      }
+    });
+  } catch (error) {
+    console.error('Erreur /api/auth/me:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // Créer un compte super admin (protégé - nécessite déjà un super admin)
 app.post('/api/auth/register-super-admin', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
@@ -472,6 +508,129 @@ app.delete('/api/contacts/:id', authenticateToken, requireResourceAccess('contac
     res.json({ message: 'Contact supprimé' });
   } catch (error) {
     console.error('Erreur suppression contact:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ==================== ROUTES RÉUNIONS ====================
+
+// Liste des réunions d'un établissement
+app.get('/api/etablissements/:etablissementId/reunions', authenticateToken, requireEtablissementAccess, async (req, res) => {
+  try {
+    const { etablissementId } = req.params;
+    const result = await pool.query(
+      'SELECT * FROM reunions WHERE etablissement_id = $1 ORDER BY jour_semaine, heure_debut',
+      [etablissementId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur liste réunions:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Détails d'une réunion
+app.get('/api/reunions/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('SELECT * FROM reunions WHERE id = $1', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Réunion non trouvée' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erreur récupération réunion:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Créer une réunion
+app.post('/api/reunions', authenticateToken, requireEtablissementAccess, async (req, res) => {
+  try {
+    const {
+      etablissement_id,
+      nom,
+      description,
+      jour_semaine,
+      heure_debut,
+      heure_fin,
+      frequence,
+      lieu,
+      url_visio,
+      actif
+    } = req.body;
+
+    if (!nom || jour_semaine === undefined || !heure_debut || !heure_fin || !etablissement_id) {
+      return res.status(400).json({ error: 'Nom, jour de la semaine, heures et établissement requis' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO reunions
+       (etablissement_id, nom, description, jour_semaine, heure_debut, heure_fin, frequence, lieu, url_visio, actif)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
+      [etablissement_id, nom, description, jour_semaine, heure_debut, heure_fin, frequence || 'hebdomadaire', lieu, url_visio, actif !== false]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Erreur création réunion:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Modifier une réunion
+app.put('/api/reunions/:id', authenticateToken, requireResourceAccess('reunion'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      nom,
+      description,
+      jour_semaine,
+      heure_debut,
+      heure_fin,
+      frequence,
+      lieu,
+      url_visio,
+      actif
+    } = req.body;
+
+    const result = await pool.query(
+      `UPDATE reunions
+       SET nom = $1, description = $2, jour_semaine = $3, heure_debut = $4, heure_fin = $5,
+           frequence = $6, lieu = $7, url_visio = $8, actif = $9
+       WHERE id = $10
+       RETURNING *`,
+      [nom, description, jour_semaine, heure_debut, heure_fin, frequence, lieu, url_visio, actif, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Réunion non trouvée' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erreur modification réunion:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Supprimer une réunion
+app.delete('/api/reunions/:id', authenticateToken, requireResourceAccess('reunion'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM reunions WHERE id = $1 RETURNING id', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Réunion non trouvée' });
+    }
+
+    res.json({ message: 'Réunion supprimée' });
+  } catch (error) {
+    console.error('Erreur suppression réunion:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
