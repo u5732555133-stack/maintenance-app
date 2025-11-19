@@ -16,8 +16,9 @@ export default function Etablissements() {
     adresse: '',
     codePostal: '',
     ville: '',
-    email: '',
-    password: '',
+    adminName: '',
+    adminEmail: '',
+    adminPassword: '',
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -46,6 +47,17 @@ export default function Etablissements() {
     if (!formData.codePostal) newErrors.codePostal = 'Le code postal est requis';
     if (!formData.ville) newErrors.ville = 'La ville est requise';
 
+    // Validation des champs admin (optionnels mais si l'un est rempli, tous doivent l'être)
+    const hasAdminInfo = formData.adminEmail || formData.adminName || formData.adminPassword;
+    if (hasAdminInfo) {
+      if (!formData.adminName) newErrors.adminName = 'Le nom de l\'admin est requis';
+      if (!formData.adminEmail) newErrors.adminEmail = 'L\'email de l\'admin est requis';
+      if (!formData.adminPassword) newErrors.adminPassword = 'Le mot de passe est requis';
+      if (formData.adminPassword && formData.adminPassword.length < 6) {
+        newErrors.adminPassword = 'Le mot de passe doit contenir au moins 6 caractères';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -68,6 +80,9 @@ export default function Etablissements() {
         email: '',
         notes: '',
         modules: ['maintenance'],
+        admin_name: formData.adminName,
+        admin_email: formData.adminEmail,
+        admin_password: formData.adminPassword,
       });
 
       alert(SUCCESS_MESSAGES.ETABLISSEMENT_CREATED);
@@ -77,8 +92,9 @@ export default function Etablissements() {
         adresse: '',
         codePostal: '',
         ville: '',
-        email: '',
-        password: '',
+        adminName: '',
+        adminEmail: '',
+        adminPassword: '',
       });
       fetchEtablissements();
     } catch (error) {
@@ -207,6 +223,38 @@ export default function Etablissements() {
                       onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
                       error={errors.ville}
                       required
+                    />
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-700 mb-4">
+                      Administrateur de l'établissement (optionnel)
+                    </h4>
+
+                    <Input
+                      label="Nom de l'admin"
+                      value={formData.adminName}
+                      onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
+                      error={errors.adminName}
+                      placeholder="Ex: Jean Dupont"
+                    />
+
+                    <Input
+                      label="Email de l'admin"
+                      type="email"
+                      value={formData.adminEmail}
+                      onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+                      error={errors.adminEmail}
+                      placeholder="admin@etablissement.fr"
+                    />
+
+                    <Input
+                      label="Mot de passe"
+                      type="password"
+                      value={formData.adminPassword}
+                      onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+                      error={errors.adminPassword}
+                      placeholder="Minimum 6 caractères"
                     />
                   </div>
                 </div>

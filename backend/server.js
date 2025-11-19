@@ -156,14 +156,20 @@ app.get('/api/etablissements/:id', authenticateToken, async (req, res) => {
 
 // Créer un établissement (super admin uniquement)
 app.post('/api/etablissements', authenticateToken, requireSuperAdmin, async (req, res) => {
+  const client = await pool.connect();
+
   try {
-    const { nom, adresse, ville, code_postal, pays, telephone, email, notes, modules } = req.body;
+    const { nom, adresse, ville, code_postal, pays, telephone, email, notes, modules, admin_email, admin_name, admin_password } = req.body;
 
     if (!nom) {
       return res.status(400).json({ error: 'Le nom est requis' });
     }
 
-    const result = await pool.query(
+    // Démarrer une transaction
+    await client.query('BEGIN');
+
+    // Créer l'établissement
+    const etablissementResult = await client.query(
       `INSERT INTO etablissements
        (nom, adresse, ville, code_postal, pays, telephone, email, notes, modules)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -171,10 +177,34 @@ app.post('/api/etablissements', authenticateToken, requireSuperAdmin, async (req
       [nom, adresse, ville, code_postal, pays, telephone, email, notes, JSON.stringify(modules || [])]
     );
 
-    res.status(201).json(result.rows[0]);
+    const etablissement = etablissementResult.rows[0];
+
+    // Si un email d'admin est fourni, créer le compte admin de l'établissement
+    if (admin_email && admin_name && admin_password) {
+      const passwordHash = await bcrypt.hash(admin_password, 10);
+
+      await client.query(
+        `INSERT INTO etablissement_users (etablissement_id, email, password_hash, name, role)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [etablissement.id, admin_email, passwordHash, admin_name, 'responsable']
+      );
+    }
+
+    // Valider la transaction
+    await client.query('COMMIT');
+
+    res.status(201).json(etablissement);
   } catch (error) {
+    // Annuler la transaction en cas d'erreur
+    await client.query('ROLLBACK');
+
+    if (error.code === '23505') {
+      return res.status(400).json({ error: 'Cet email existe déjà' });
+    }
     console.error('Erreur création établissement:', error);
     res.status(500).json({ error: 'Erreur serveur' });
+  } finally {
+    client.release();
   }
 });
 
