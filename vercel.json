@@ -1,11 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/rpi-proxy.cjs?path=$1"
-    },
-    {
-      "source": "/:path*",
+      "source": "/:path((?!api).*)*",
       "destination": "/index.html"
     }
   ]

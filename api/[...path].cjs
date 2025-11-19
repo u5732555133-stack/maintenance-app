@@ -2,7 +2,6 @@
 // Contourne les restrictions Private Network Access du navigateur
 
 const https = require('https');
-const { URL } = require('url');
 
 const RPI_API_URL = 'https://rpi011.taild92b43.ts.net/api';
 
@@ -19,21 +18,11 @@ module.exports = async (req, res) => {
   }
 
   try {
-    console.log('[Proxy] req.url:', req.url);
-    console.log('[Proxy] req.headers.host:', req.headers.host);
-
-    // Extraire le chemin de l'API depuis les query params
-    let path = '';
-    try {
-      const url = new URL(req.url, `https://${req.headers.host}`);
-      path = url.searchParams.get('path') || '';
-      console.log('[Proxy] Extracted path:', path);
-    } catch (urlError) {
-      console.error('[Proxy] URL parsing error:', urlError);
-      return res.status(500).json({ error: 'URL parsing failed', details: urlError.message });
-    }
-
+    // Extraire le chemin de l'API depuis les paramètres de route dynamique
+    const pathSegments = req.query.path || [];
+    const path = Array.isArray(pathSegments) ? pathSegments.join('/') : pathSegments;
     const targetUrl = `${RPI_API_URL}/${path}`;
+
     console.log(`[Proxy] ${req.method} ${targetUrl}`);
 
     // Lire le body pour POST/PUT
