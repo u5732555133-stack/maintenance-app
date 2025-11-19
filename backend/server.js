@@ -3,7 +3,7 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import pool from './db.js';
-import { authenticateToken, requireSuperAdmin, requireEtablissementAccess, generateToken } from './middleware/auth.js';
+import { authenticateToken, requireSuperAdmin, requireEtablissementAccess, requireResourceAccess, generateToken } from './middleware/auth.js';
 
 dotenv.config();
 
@@ -292,7 +292,7 @@ app.get('/api/fiches/:id', authenticateToken, async (req, res) => {
 });
 
 // Créer une fiche
-app.post('/api/fiches', authenticateToken, async (req, res) => {
+app.post('/api/fiches', authenticateToken, requireEtablissementAccess, async (req, res) => {
   try {
     const {
       etablissement_id,
@@ -332,7 +332,7 @@ app.post('/api/fiches', authenticateToken, async (req, res) => {
 });
 
 // Modifier une fiche
-app.put('/api/fiches/:id', authenticateToken, async (req, res) => {
+app.put('/api/fiches/:id', authenticateToken, requireResourceAccess('fiche'), async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -375,7 +375,7 @@ app.put('/api/fiches/:id', authenticateToken, async (req, res) => {
 });
 
 // Supprimer une fiche
-app.delete('/api/fiches/:id', authenticateToken, async (req, res) => {
+app.delete('/api/fiches/:id', authenticateToken, requireResourceAccess('fiche'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('DELETE FROM fiches_maintenance WHERE id = $1 RETURNING id', [id]);
@@ -410,7 +410,7 @@ app.get('/api/etablissements/:etablissementId/contacts', authenticateToken, requ
 });
 
 // Créer un contact
-app.post('/api/contacts', authenticateToken, async (req, res) => {
+app.post('/api/contacts', authenticateToken, requireEtablissementAccess, async (req, res) => {
   try {
     const { etablissement_id, nom, prenom, fonction, email, telephone, mobile, notes } = req.body;
 
@@ -434,7 +434,7 @@ app.post('/api/contacts', authenticateToken, async (req, res) => {
 });
 
 // Modifier un contact
-app.put('/api/contacts/:id', authenticateToken, async (req, res) => {
+app.put('/api/contacts/:id', authenticateToken, requireResourceAccess('contact'), async (req, res) => {
   try {
     const { id } = req.params;
     const { nom, prenom, fonction, email, telephone, mobile, notes } = req.body;
@@ -460,7 +460,7 @@ app.put('/api/contacts/:id', authenticateToken, async (req, res) => {
 });
 
 // Supprimer un contact
-app.delete('/api/contacts/:id', authenticateToken, async (req, res) => {
+app.delete('/api/contacts/:id', authenticateToken, requireResourceAccess('contact'), async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('DELETE FROM contacts WHERE id = $1 RETURNING id', [id]);

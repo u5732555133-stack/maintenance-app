@@ -48,6 +48,46 @@ export const requireEtablissementAccess = (req, res, next) => {
   next();
 };
 
+// Middleware pour vérifier que la ressource appartient à l'établissement de l'utilisateur
+export const requireResourceAccess = (resourceType) => {
+  return async (req, res, next) => {
+    // Import dynamique de pool pour éviter la dépendance circulaire
+    const pool = (await import('../db.js')).default;
+
+    const resourceId = req.params.id;
+
+    // Super admin a accès à tout
+    if (req.user.role === 'super_admin') {
+      next();
+      return;
+    }
+
+    try {
+      // Déterminer la table selon le type de ressource
+      const table = resourceType === 'fiche' ? 'fiches_maintenance' : 'contacts';
+
+      // Vérifier que la ressource existe et appartient à l'établissement de l'utilisateur
+      const result = await pool.query(
+        `SELECT etablissement_id FROM ${table} WHERE id = $1`,
+        [resourceId]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: `${resourceType === 'fiche' ? 'Fiche' : 'Contact'} non trouvé(e)` });
+      }
+
+      if (result.rows[0].etablissement_id !== req.user.etablissement_id) {
+        return res.status(403).json({ error: 'Accès non autorisé à cette ressource' });
+      }
+
+      next();
+    } catch (error) {
+      console.error(`Erreur vérification accès ${resourceType}:`, error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  };
+};
+
 // Fonction pour générer un token JWT
 export const generateToken = (user) => {
   return jwt.sign(
