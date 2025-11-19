@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import { getFirestoreForZone } from '../../utils/firebase';
+import apiClient from '../../utils/api';
 import Navbar from '../Shared/Navbar';
 import Card from '../Shared/Card';
 import Loader from '../Shared/Loader';
@@ -26,21 +25,20 @@ export default function AdminDashboard() {
 
   async function fetchDashboardData() {
     try {
-      const db = getFirestoreForZone(userEtablissement.zone || 'zone1');
       const etablissementId = userEtablissement.id;
 
-      // Récupère les fiches
-      const fichesSnap = await getDocs(
-        collection(db, `etablissements/${etablissementId}/fiches`)
-      );
+      // Récupère les fiches et contacts via API
+      const [fichesData, contactsData] = await Promise.all([
+        apiClient.getFiches(etablissementId),
+        apiClient.getContacts(etablissementId)
+      ]);
 
       let totalFiches = 0;
       let fichesEnAttente = 0;
       let fichesEnRetard = 0;
       const prochaines = [];
 
-      fichesSnap.forEach((doc) => {
-        const fiche = doc.data();
+      fichesData.forEach((fiche) => {
         totalFiches++;
 
         if (fiche.statut === 'en_attente') {
@@ -48,13 +46,12 @@ export default function AdminDashboard() {
         }
 
         if (fiche.prochainEnvoi) {
-          const prochainDate = fiche.prochainEnvoi.toDate ? fiche.prochainEnvoi.toDate() : new Date(fiche.prochainEnvoi);
+          const prochainDate = new Date(fiche.prochainEnvoi);
           if (isLate(prochainDate)) {
             fichesEnRetard++;
           }
 
           prochaines.push({
-            id: doc.id,
             ...fiche,
             prochainEnvoiDate: prochainDate,
           });
@@ -64,16 +61,11 @@ export default function AdminDashboard() {
       // Trie par date (les plus proches en premier)
       prochaines.sort((a, b) => a.prochainEnvoiDate - b.prochainEnvoiDate);
 
-      // Récupère les contacts
-      const contactsSnap = await getDocs(
-        collection(db, `etablissements/${etablissementId}/contacts`)
-      );
-
       setStats({
         totalFiches,
         fichesEnAttente,
         fichesEnRetard,
-        totalContacts: contactsSnap.size,
+        totalContacts: contactsData.length,
       });
 
       setProchaineFiches(prochaines.slice(0, 5)); // Top 5

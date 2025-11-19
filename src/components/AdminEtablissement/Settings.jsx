@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import { getFirestoreForZone } from '../../utils/firebase';
+import apiClient from '../../utils/api';
 import { SUCCESS_MESSAGES } from '../../utils/constants';
 import Navbar from '../Shared/Navbar';
 import Card from '../Shared/Card';
@@ -52,34 +51,8 @@ export default function Settings() {
   async function handleSaveEmailConfig() {
     setSaving(true);
     try {
-      const db = getFirestoreForZone(userEtablissement.zone || 'zone1');
-      const etabRef = doc(db, 'etablissements', userEtablissement.id);
-
-      const configToSave = {
-        provider: emailProvider,
-        fromEmail: emailConfig.fromEmail,
-        fromName: emailConfig.fromName,
-        configured: true,
-        configuredAt: new Date(),
-      };
-
-      // Ajoute les clés spécifiques selon le provider
-      if (emailProvider === 'resend') {
-        configToSave.resendApiKey = emailConfig.resendApiKey;
-      } else if (emailProvider === 'sendgrid') {
-        configToSave.sendgridApiKey = emailConfig.sendgridApiKey;
-      } else if (emailProvider === 'smtp') {
-        configToSave.smtpHost = emailConfig.smtpHost;
-        configToSave.smtpPort = emailConfig.smtpPort;
-        configToSave.smtpUser = emailConfig.smtpUser;
-        configToSave.smtpPassword = emailConfig.smtpPassword;
-      }
-
-      await updateDoc(etabRef, {
-        emailConfig: configToSave,
-      });
-
-      alert(SUCCESS_MESSAGES.ETABLISSEMENT_UPDATED + '\n\nConfiguration email enregistrée avec succès!');
+      // TODO: Implémenter la sauvegarde de la config email via API PostgreSQL
+      alert('Configuration email : Fonctionnalité en cours de développement.\n\nPour le moment, utilisez la configuration par défaut.');
     } catch (error) {
       console.error('Erreur:', error);
       alert('Erreur lors de la sauvegarde: ' + error.message);

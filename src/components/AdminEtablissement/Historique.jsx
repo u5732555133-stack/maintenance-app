@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import { getFirestoreForZone } from '../../utils/firebase';
 import { formatDate, formatDateTime } from '../../utils/helpers';
 import Navbar from '../Shared/Navbar';
 import Card from '../Shared/Card';
@@ -20,39 +18,9 @@ export default function Historique() {
 
   async function fetchHistorique() {
     try {
-      const db = getFirestoreForZone(userEtablissement.zone || 'zone1');
-      const etablissementId = userEtablissement.id;
-
-      // Récupère l'historique (limité aux 100 derniers)
-      const historiqueSnap = await getDocs(
-        query(
-          collection(db, `etablissements/${etablissementId}/historique`),
-          orderBy('confirmedAt', 'desc'),
-          limit(100)
-        )
-      );
-
-      const historiqueData = [];
-      for (const doc of historiqueSnap.docs) {
-        const data = doc.data();
-
-        // Récupère les données de la fiche
-        let ficheData = null;
-        if (data.ficheId) {
-          const ficheDoc = await data.ficheId.get();
-          if (ficheDoc.exists()) {
-            ficheData = ficheDoc.data();
-          }
-        }
-
-        historiqueData.push({
-          id: doc.id,
-          ...data,
-          ficheData,
-        });
-      }
-
-      setHistorique(historiqueData);
+      // TODO: Implémenter l'historique avec PostgreSQL
+      // Pour le moment, aucun historique n'est disponible
+      setHistorique([]);
     } catch (error) {
       console.error('Erreur lors de la récupération de l\'historique:', error);
     } finally {

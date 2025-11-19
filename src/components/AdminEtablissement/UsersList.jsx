@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useAuth } from '../../contexts/AuthContext';
-import { getFirestoreForZone, getAuthForZone } from '../../utils/firebase';
 import { SUCCESS_MESSAGES, ROLES } from '../../utils/constants';
 import { isValidEmail } from '../../utils/helpers';
 import Navbar from '../Shared/Navbar';
@@ -33,23 +30,9 @@ export default function UsersList() {
 
   async function fetchUsers() {
     try {
-      const db = getFirestoreForZone(userEtablissement.zone || 'zone1');
-      const usersSnap = await getDocs(
-        collection(db, `etablissements/${userEtablissement.id}/users`)
-      );
-
-      const usersData = [];
-      usersSnap.forEach((doc) => {
-        usersData.push({
-          id: doc.id,
-          ...doc.data(),
-        });
-      });
-
-      // Trie par nom
-      usersData.sort((a, b) => a.nom.localeCompare(b.nom));
-
-      setUsers(usersData);
+      // TODO: Implémenter la gestion des utilisateurs avec PostgreSQL
+      // Pour le moment, utilisez les contacts avec le rôle "responsable" pour donner accès
+      setUsers([]);
     } catch (error) {
       console.error('Erreur lors de la récupération des utilisateurs:', error);
     } finally {
@@ -97,113 +80,12 @@ export default function UsersList() {
 
     if (!validateForm()) return;
 
-    setSubmitting(true);
-
-    try {
-      const db = getFirestoreForZone(userEtablissement.zone || 'zone1');
-
-      if (editingUser) {
-        // Modification d'un utilisateur existant
-        const userRef = doc(db, `etablissements/${userEtablissement.id}/users`, editingUser.id);
-        await updateDoc(userRef, {
-          nom: formData.nom,
-          fonction: formData.fonction,
-          updatedAt: new Date(),
-        });
-
-        alert(SUCCESS_MESSAGES.USER_UPDATED);
-      } else {
-        // Création d'un nouvel utilisateur
-        console.log('🔐 Création du compte utilisateur en ZONE1:', formData.email);
-
-        // Génère un mot de passe temporaire
-        const tempPassword = Math.random().toString(36).slice(-10) + 'A1!';
-
-        // Crée le compte Firebase Auth en zone1
-        const auth = getAuthForZone('zone1');
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          formData.email,
-          tempPassword
-        );
-
-        console.log('✅ Compte créé, UID:', userCredential.user.uid);
-
-        // Crée le document utilisateur dans zone1/users (pour l'auth globale)
-        const dbAuth = getFirestoreForZone('zone1');
-        await setDoc(doc(dbAuth, 'users', userCredential.user.uid), {
-          uid: userCredential.user.uid,
-          email: formData.email,
-          nom: formData.nom,
-          fonction: formData.fonction,
-          role: ROLES.USER_ETABLISSEMENT,
-          etablissementId: userEtablissement.id,
-          dataZone: userEtablissement.zone || 'zone1',
-          createdAt: new Date(),
-        });
-
-        console.log('✅ Document utilisateur créé en zone1');
-
-        // Crée le document dans la sous-collection de l'établissement (pour la liste)
-        await addDoc(collection(db, `etablissements/${userEtablissement.id}/users`), {
-          uid: userCredential.user.uid,
-          nom: formData.nom,
-          email: formData.email,
-          fonction: formData.fonction,
-          role: ROLES.USER_ETABLISSEMENT,
-          createdAt: new Date(),
-        });
-
-        console.log('✅ Document utilisateur créé dans sous-collection établissement');
-
-        // Envoie un email de réinitialisation de mot de passe
-        try {
-          await sendPasswordResetEmail(auth, formData.email);
-          console.log('✅ Email de réinitialisation envoyé');
-          alert(
-            SUCCESS_MESSAGES.USER_CREATED +
-            '\n\nUn email de création de mot de passe a été envoyé à ' +
-            formData.email
-          );
-        } catch (emailError) {
-          console.error('⚠️ Erreur envoi email:', emailError);
-          alert(
-            SUCCESS_MESSAGES.USER_CREATED +
-            '\n\nAttention: L\'email de configuration n\'a pas pu être envoyé. ' +
-            'Veuillez demander à l\'utilisateur de réinitialiser son mot de passe.'
-          );
-        }
-      }
-
-      setShowModal(false);
-      setFormData({ nom: '', email: '', fonction: '' });
-      fetchUsers();
-    } catch (error) {
-      console.error('Erreur:', error);
-      if (error.code === 'auth/email-already-in-use') {
-        alert('Erreur: Cet email est déjà utilisé par un autre compte.');
-      } else {
-        alert('Erreur lors de l\'opération: ' + error.message);
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    alert('Gestion des utilisateurs : Fonctionnalité en cours de développement.\n\nPour donner accès à quelqu\'un, créez un contact avec le rôle "Responsable" dans la section Contacts.');
+    setShowModal(false);
   }
 
   async function handleDelete(user) {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer ${user.nom} ?\n\nAttention: Le compte Firebase Auth ne sera pas supprimé automatiquement.`)) {
-      return;
-    }
-
-    try {
-      const db = getFirestoreForZone(userEtablissement.zone || 'zone1');
-      await deleteDoc(doc(db, `etablissements/${userEtablissement.id}/users`, user.id));
-      alert(SUCCESS_MESSAGES.USER_DELETED);
-      fetchUsers();
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-      alert('Erreur lors de la suppression');
-    }
+    alert('Gestion des utilisateurs : Fonctionnalité en cours de développement.\n\nUtilisez la section Contacts pour gérer les personnes ayant accès.');
   }
 
   return (
