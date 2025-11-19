@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/rpi-proxy.cjs"
+      "source": "/api/(.*)",
+      "destination": "/api/rpi-proxy.cjs?path=$1"
     },
     {
       "source": "/:path*",

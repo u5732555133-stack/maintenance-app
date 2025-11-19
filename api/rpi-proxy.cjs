@@ -18,9 +18,10 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Extraire le chemin de l'API depuis l'URL
-    const path = req.url.replace(/^\/api/, '');
-    const targetUrl = `${RPI_API_URL}${path}`;
+    // Extraire le chemin de l'API depuis les query params
+    const url = new URL(req.url, `https://${req.headers.host}`);
+    const path = url.searchParams.get('path') || '';
+    const targetUrl = `${RPI_API_URL}/${path}`;
 
     console.log(`[Proxy] ${req.method} ${targetUrl}`);
 
@@ -45,7 +46,7 @@ module.exports = async (req, res) => {
       const options = {
         hostname: 'rpi011.taild92b43.ts.net',
         port: 443,
-        path: path,
+        path: `/api/${path}`,
         method: req.method,
         headers: {
           'Content-Type': 'application/json',
