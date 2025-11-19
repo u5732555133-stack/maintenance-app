@@ -51,7 +51,7 @@ function App() {
           <Route
             path={ROUTES.ADMIN_DASHBOARD}
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT]}>
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT, ROLES.RESPONSABLE]}>
                 <AdminDashboard />
               </ProtectedRoute>
             }
@@ -59,7 +59,7 @@ function App() {
           <Route
             path={ROUTES.ADMIN_FICHES}
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT]}>
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT, ROLES.RESPONSABLE]}>
                 <FichesList />
               </ProtectedRoute>
             }
@@ -67,7 +67,7 @@ function App() {
           <Route
             path={ROUTES.ADMIN_CONTACTS}
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT]}>
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT, ROLES.RESPONSABLE]}>
                 <ContactsList />
               </ProtectedRoute>
             }
@@ -75,7 +75,7 @@ function App() {
           <Route
             path={ROUTES.ADMIN_USERS}
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT]}>
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT, ROLES.RESPONSABLE]}>
                 <UsersList />
               </ProtectedRoute>
             }
@@ -83,7 +83,7 @@ function App() {
           <Route
             path={ROUTES.ADMIN_HISTORIQUE}
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT]}>
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT, ROLES.RESPONSABLE]}>
                 <Historique />
               </ProtectedRoute>
             }
@@ -91,7 +91,7 @@ function App() {
           <Route
             path={ROUTES.ADMIN_SETTINGS}
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT]}>
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN_ETABLISSEMENT, ROLES.RESPONSABLE]}>
                 <Settings />
               </ProtectedRoute>
             }

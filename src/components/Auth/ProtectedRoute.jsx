@@ -27,7 +27,7 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
     // Redirige vers le dashboard approprié selon le rôle
     if (userRole === 'super_admin') {
       return <Navigate to={ROUTES.SUPER_ADMIN_DASHBOARD} replace />;
-    } else if (userRole === 'admin_etablissement') {
+    } else if (userRole === 'admin_etablissement' || userRole === 'responsable') {
       return <Navigate to={ROUTES.ADMIN_DASHBOARD} replace />;
     } else {
       return <Navigate to={ROUTES.HOME} replace />;

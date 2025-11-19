@@ -91,7 +91,10 @@ export function AuthProvider({ children }) {
    * Vérifie si l'utilisateur est admin établissement
    */
   function isAdminEtablissement() {
-    return userRole === ROLES.ADMIN_ETABLISSEMENT || userRole === 'admin_etablissement';
+    return userRole === ROLES.ADMIN_ETABLISSEMENT ||
+           userRole === 'admin_etablissement' ||
+           userRole === ROLES.RESPONSABLE ||
+           userRole === 'responsable';
   }
 
   // Vérifie le token au chargement

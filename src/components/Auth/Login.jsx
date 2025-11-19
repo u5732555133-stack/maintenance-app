@@ -18,7 +18,7 @@ export default function Login() {
       // Redirige selon le rôle
       if (userRole === ROLES.SUPER_ADMIN) {
         navigate(ROUTES.SUPER_ADMIN_DASHBOARD, { replace: true });
-      } else if (userRole === ROLES.ADMIN_ETABLISSEMENT) {
+      } else if (userRole === ROLES.ADMIN_ETABLISSEMENT || userRole === ROLES.RESPONSABLE || userRole === 'responsable') {
         navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
       } else {
         navigate(ROUTES.HOME, { replace: true });

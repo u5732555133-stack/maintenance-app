@@ -2,6 +2,7 @@
 export const ROLES = {
   SUPER_ADMIN: 'super_admin',
   ADMIN_ETABLISSEMENT: 'admin_etablissement',
+  RESPONSABLE: 'responsable', // Alias pour admin_etablissement (backend PostgreSQL)
   USER_ETABLISSEMENT: 'user_etablissement',
   USER: 'user',
 };
