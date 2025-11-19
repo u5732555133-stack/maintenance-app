@@ -18,12 +18,12 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Extraire le chemin de l'API depuis les paramètres de route dynamique
-    const pathSegments = req.query.path || [];
-    const path = Array.isArray(pathSegments) ? pathSegments.join('/') : pathSegments;
+    // Extraire le chemin de l'API depuis l'URL
+    // req.url contient le chemin original malgré le rewrite Vercel
+    const path = (req.url || '').replace(/^\/api\//, '').replace(/\?.*$/, '');
     const targetUrl = `${RPI_API_URL}/${path}`;
 
-    console.log(`[Proxy] ${req.method} ${targetUrl}`);
+    console.log(`[Proxy] ${req.method} ${req.url} -> ${targetUrl}`);
 
     // Lire le body pour POST/PUT
     let bodyData = '';
