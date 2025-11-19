@@ -33,7 +33,18 @@ export function AuthProvider({ children }) {
         // Récupère les données de l'établissement si besoin
         try {
           const etablissement = await apiClient.getEtablissement(response.user.etablissement_id);
-          setUserEtablissement(etablissement);
+
+          // Mapper modules (backend) vers modulesActifs (frontend)
+          const etablissementMapped = {
+            ...etablissement,
+            modulesActifs: Array.isArray(etablissement.modules)
+              ? etablissement.modules
+              : (typeof etablissement.modules === 'string'
+                  ? JSON.parse(etablissement.modules)
+                  : [])
+          };
+
+          setUserEtablissement(etablissementMapped);
         } catch (error) {
           console.error('Erreur lors de la récupération de l\'établissement:', error);
         }
